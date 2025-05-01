@@ -1,0 +1,19 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\FinanceSportApi.Domain\FinanceSportApi.Domain.csproj" />
+    <ProjectReference Include="..\FinanceSportApi.Infra.Data\FinanceSportApi.Infra.Data.csproj" />
+    <ProjectReference Include="..\FinanceSportApi.Infra.Shared\FinanceSportApi.Infra.Shared.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Services\" />
+  </ItemGroup>
+
+</Project>

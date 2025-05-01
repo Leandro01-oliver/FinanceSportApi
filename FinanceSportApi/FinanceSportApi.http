@@ -1,0 +1,6 @@
+@FinanceSportApi_HostAddress = http://localhost:5236
+
+GET {{FinanceSportApi_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
