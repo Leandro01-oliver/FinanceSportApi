@@ -6,13 +6,15 @@ namespace FinanceSportApi.Infra.Data.Context
     public class DataContext(DbContextOptions<DataContext> options) : DbContext(options)
     {
         public DbSet<Investimento>? Investimentos { get; set; }
-        public DbSet<Produto>? Produtos { get; set; }
+        public DbSet<Orcamento>? Orcamentos { get; set; }
+        public DbSet<Usuario>? Usuarios { get; set; }
         public DbSet<Transacao>? Transacaos { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.ApplyConfiguration(new InvestimentoConfig());
-            modelBuilder.ApplyConfiguration(new ProdutoConfig());
+            modelBuilder.ApplyConfiguration(new OrcamentoConfig());
+            modelBuilder.ApplyConfiguration(new UsuarioConfig());
             modelBuilder.ApplyConfiguration(new TransacaoConfig());
         }
     }

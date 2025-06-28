@@ -361,3 +361,8 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+
+# Arquivos da configuração do projeto FinanceSportApi
+FinanceSportApi/appsettings.json
+FinanceSportApi/appsettings.*.json
+FinanceSportApi/Properties/launchSettings.json

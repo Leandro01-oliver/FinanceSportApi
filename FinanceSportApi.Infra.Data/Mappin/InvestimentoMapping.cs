@@ -11,29 +11,34 @@ namespace FinanceSportApi.Infraestruture.Data.Mapping
 
             return new InvestimentoVm
             {
-                InvestimentoId = investimento.InvestimentoId,
-                TipoProdutoInvestimento = investimento.TipoProdutoInvestimento,
-                TipoAcaoInvestimento = investimento.TipoAcaoInvestimento,
-                TaxaJuros = investimento.TaxaJuros,
-                OutrosTipoProdutoInvestimento = investimento.OutrosTipoProdutoInvestimento,
-                OutrosTipoAcaoInvestimento = investimento.OutrosTipoAcaoInvestimento,
-                Transacoes = investimento.Transacoes.Select(t => t.ToViewModel()).ToList()
+                Id = investimento.Id,
+                TipoInvestimento = investimento.TipoInvestimento,
+                Nome = investimento.Nome,
+                Quantidade = investimento.Quantidade,
+                PrecoUnitario = investimento.PrecoUnitario,
+                DataCompra = investimento.DataCompra,
+                UsuarioId = investimento.UsuarioId,
+                Usuario = new UsuarioVm
+                {
+                    Id = investimento.Usuario.Id,
+                    Nome = investimento.Usuario.Nome
+                }
             };
         }
 
-        public static Investimento ToEntity(this InvestimentoVm investimentoViewModel)
+        public static Investimento ToEntity(this InvestimentoVm investimentoVm)
         {
-            if (investimentoViewModel == null) return null;
+            if (investimentoVm == null) return null;
 
             return new Investimento
             {
-                InvestimentoId = investimentoViewModel.InvestimentoId,
-                TipoProdutoInvestimento = investimentoViewModel.TipoProdutoInvestimento,
-                TipoAcaoInvestimento = investimentoViewModel.TipoAcaoInvestimento,
-                TaxaJuros = investimentoViewModel.TaxaJuros,
-                OutrosTipoProdutoInvestimento = investimentoViewModel.OutrosTipoProdutoInvestimento,
-                OutrosTipoAcaoInvestimento = investimentoViewModel.OutrosTipoAcaoInvestimento,
-                Transacoes = investimentoViewModel.Transacoes.Select(t => t.ToEntity()).ToList()
+                Id = investimentoVm.Id,
+                TipoInvestimento = investimentoVm.TipoInvestimento,
+                Nome = investimentoVm.Nome,
+                Quantidade = investimentoVm.Quantidade,
+                PrecoUnitario = investimentoVm.PrecoUnitario,
+                DataCompra = investimentoVm.DataCompra,
+                UsuarioId = investimentoVm.UsuarioId
             };
         }
     }

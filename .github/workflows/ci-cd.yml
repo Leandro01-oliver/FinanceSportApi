@@ -1,0 +1,82 @@
+name: CI/CD com Qualidade
+
+on:
+  push:
+    branches: [feature/*]
+
+jobs:
+  build-test-analyze:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --no-restore
+
+      - name: Testes com cobertura (somente arquivos relevantes)
+        run: >
+          dotnet test FinanceSportApi.Test/FinanceSportApi.Test.csproj
+          --no-build
+          --collect:"XPlat Code Coverage"
+          --filter "FullyQualifiedName~InvestimentoTest|FullyQualifiedName~OrcamentoTest|FullyQualifiedName~TransacaoTest|FullyQualifiedName~UsuarioTest"
+
+      - name: Análise SonarCloud
+        uses: SonarSource/sonarcloud-github-action@v2
+        with:
+          projectKey: ${{ secrets.SONAR_PROJECT_KEY }}
+          organization: ${{ secrets.SONAR_ORGANIZATION }}
+          token: ${{ secrets.SONAR_TOKEN }}
+          args: >
+            -Dsonar.cs.opencover.reportsPaths=**/coverage.opencover.xml
+            -Dsonar.qualitygate.wait=true
+
+      - name: Verificar resultado do Quality Gate
+        id: quality
+        run: |
+          if [ "${{ steps.análise-sonar.outputs.quality_gate_status }}" != "PASSED" ]; then
+            echo "Quality Gate falhou"
+            echo "fail=true" >> $GITHUB_OUTPUT
+          else
+            echo "Quality Gate passou"
+            echo "fail=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Enviar e-mail se falhar
+        if: steps.quality.outputs.fail == 'true'
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.seuservidor.com
+          server_port: 587
+          username: ${{ secrets.EMAIL_USER }}
+          password: ${{ secrets.EMAIL_PASS }}
+          subject: "❌ Merge recusado: cobertura de testes insuficiente"
+          to: devs@suaprojetotime.com
+          from: CI Bot <ci@suaprojetotime.com>
+          body: |
+            Olá, o merge foi recusado porque o código não atingiu a cobertura mínima de 80%.
+            Acesse o relatório do SonarCloud para ver os pontos a melhorar:
+            https://sonarcloud.io/project/overview?id=${{ secrets.SONAR_PROJECT_KEY }}
+
+            Dicas para resolver:
+            - Adicione testes unitários para os métodos não cobertos
+            - Evite código duplicado e complexidade excessiva
+            - Refaça o push após os ajustes
+
+      - name: Merge automático para develop
+        if: steps.quality.outputs.fail == 'false'
+        uses: devops-infra/action-pull-request@v0.5.0
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          source_branch: ${{ github.ref_name }}
+          target_branch: develop
+          title: "Merge automático: ${{ github.ref_name }} → develop"
+          body: "Merge aprovado automaticamente após passar no quality gate."
+

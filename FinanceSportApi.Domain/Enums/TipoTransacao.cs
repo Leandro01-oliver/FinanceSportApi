@@ -2,10 +2,7 @@
 {
     public enum TipoTransacao
     {
-        Credito = 1,
-        Debito,
-        Pix,
-        PixAgendado,
-        Outros
+        Entrada = 1,
+        Saida
     }
 }

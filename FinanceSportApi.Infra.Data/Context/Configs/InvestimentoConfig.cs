@@ -8,29 +8,19 @@ namespace FinanceSportApi.Infra.Data
     {
         public void Configure(EntityTypeBuilder<Investimento> builder)
         {
-            builder.HasKey(i => i.InvestimentoId);
+            builder.HasKey(p => p.Id);
 
-            builder.Property(i => i.InvestimentoId)
-                   .IsRequired();
+            builder.Property(x => x.Id).HasColumnName("InvestimentoId");
+            builder.Property(x => x.TipoInvestimento).IsRequired();
+            builder.Property(x => x.Nome).HasMaxLength(250).IsRequired();
+            builder.Property(x => x.Quantidade).IsRequired();
+            builder.Property(x => x.PrecoUnitario).IsRequired();
+            builder.Property(x => x.DataCompra);
 
-            builder.Property(i => i.TipoProdutoInvestimento)
-                   .IsRequired(); 
-
-            builder.Property(i => i.TipoAcaoInvestimento)
-                   .IsRequired();
-
-            builder.Property(i => i.TaxaJuros);
-
-            builder.Property(i => i.OutrosTipoProdutoInvestimento)
-                   .HasMaxLength(255); 
-
-            builder.Property(i => i.OutrosTipoAcaoInvestimento)
-                   .HasMaxLength(255);
-
-            builder.HasMany(i => i.Transacoes)
-                   .WithOne(x => x.Investimento) 
-                   .HasForeignKey(x => x.TransacaoId) 
-                   .OnDelete(DeleteBehavior.Cascade); 
+            builder.HasOne(x => x.Usuario)
+               .WithMany(u => u.Investimentos)
+               .HasForeignKey(x => x.UsuarioId)
+               .OnDelete(DeleteBehavior.Cascade);
         }
     }
 }

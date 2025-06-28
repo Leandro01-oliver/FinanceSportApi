@@ -1,3 +1,6 @@
+using FinanceSportApi.Domain.Enums;
+using FinanceSportApi.Helpers.Extensions;
+using FinanceSportApi.Infra.Shared;
 using FinanceSportApi.Infra.Shared.Extension;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -8,7 +11,10 @@ builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-builder.Services.AddDataContextDb(builder.Configuration);
+builder.Services.AddDataContextDb(builder.Configuration,TipoDb.SQL);
+builder.Services.AddServices();
+builder.Services.AddRepositoryes();
+builder.Services.AddAutoMapperConf();
 
 var app = builder.Build();
 
