@@ -1,10 +1,12 @@
+version: '3.9'
+
 services:
   db:
     image: mcr.microsoft.com/mssql/server:2019-latest
     container_name: sqlserver
     environment:
       - ACCEPT_EULA=Y
-      - SA_PASSWORD=Sonar123!
+      - SA_PASSWORD=${SA_PASSWORD}
     ports:
       - "1433:1433"
     volumes:
@@ -19,11 +21,11 @@ services:
       bash -c "
         echo '⏳ Aguardando SQL Server iniciar...';
         sleep 40 &&
-        echo '🚀 Criando banco FinaceApp...' &&
-        /opt/mssql-tools/bin/sqlcmd -S db -U sa -P 'Sonar123!' -Q \"
-          IF NOT EXISTS (SELECT * FROM sys.databases WHERE name = 'FinaceApp')
+        echo '🚀 Criando banco '${DB_NAME}'...' &&
+        /opt/mssql-tools/bin/sqlcmd -S db -U sa -P '${SA_PASSWORD}' -Q \"
+          IF NOT EXISTS (SELECT * FROM sys.databases WHERE name = '${DB_NAME}')
           BEGIN
-            CREATE DATABASE FinaceApp;
+            CREATE DATABASE '${DB_NAME}';
           END;\""
     restart: "no"
 
@@ -35,6 +37,8 @@ services:
     working_dir: /src
     volumes:
       - .:/src
+    environment:
+      - SA_PASSWORD=${SA_PASSWORD}
     command: >
       sh -c "
         dotnet tool install --global dotnet-ef &&
@@ -51,7 +55,7 @@ services:
     depends_on:
       - db-init
     environment:
-      - ConnectionStrings__Default=Server=db;Database=FinaceApp;User Id=sa;Password=Sonar123!
+      - ConnectionStrings__Default=Server=db;Database=FinaceApp;User Id=sa;Password=${SA_PASSWORD}
 
 volumes:
   sql_data:
