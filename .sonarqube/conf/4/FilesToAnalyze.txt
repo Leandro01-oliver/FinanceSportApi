@@ -1,0 +1,3 @@
+﻿E:\Finance\FinanceSportApi\FinanceSportApi.Infra.Shared\Extension\DataContextDbExtension.cs
+E:\Finance\FinanceSportApi\FinanceSportApi.Infra.Shared\Extension\MappingExtension.cs
+E:\Finance\FinanceSportApi\FinanceSportApi.Infra.Shared\Extension\RepositoryCollectionExtension.cs

@@ -79,4 +79,3 @@ jobs:
           target_branch: develop
           title: "Merge automático: ${{ github.ref_name }} → develop"
           body: "Merge aprovado automaticamente após passar no quality gate."
-

@@ -1,0 +1,57 @@
+services:
+  db:
+    image: mcr.microsoft.com/mssql/server:2019-latest
+    container_name: sqlserver
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=Sonar123!
+    ports:
+      - "1433:1433"
+    volumes:
+      - sql_data:/var/opt/mssql
+
+  db-init:
+    image: mcr.microsoft.com/mssql/server:2019-latest
+    container_name: db-init
+    depends_on:
+      - db
+    command: >
+      bash -c "
+        echo '⏳ Aguardando SQL Server iniciar...';
+        sleep 40 &&
+        echo '🚀 Criando banco FinaceApp...' &&
+        /opt/mssql-tools/bin/sqlcmd -S db -U sa -P 'Sonar123!' -Q \"
+          IF NOT EXISTS (SELECT * FROM sys.databases WHERE name = 'FinaceApp')
+          BEGIN
+            CREATE DATABASE FinaceApp;
+          END;\""
+    restart: "no"
+
+  migrator:
+    image: mcr.microsoft.com/dotnet/sdk:8.0
+    container_name: migrator
+    depends_on:
+      - db-init
+    working_dir: /src
+    volumes:
+      - .:/src
+    command: >
+      sh -c "
+        dotnet tool install --global dotnet-ef &&
+        export PATH=$PATH:/root/.dotnet/tools &&
+        dotnet ef migrations add TempInit --project FinanceSportApi.Infra.Data --startup-project FinanceSportApi --output-dir Migrations &&
+        dotnet ef database update --project FinanceSportApi.Infra.Data --startup-project FinanceSportApi &&
+        rm -rf FinanceSportApi.Infra.Data/Migrations/TempInit*"
+
+  financesportapi:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: financesportapi
+    depends_on:
+      - db-init
+    environment:
+      - ConnectionStrings__Default=Server=db;Database=FinaceApp;User Id=sa;Password=Sonar123!
+
+volumes:
+  sql_data:

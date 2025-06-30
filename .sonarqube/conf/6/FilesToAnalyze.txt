@@ -1,0 +1,10 @@
+﻿E:\Finance\FinanceSportApi\FinanceSportApi\Helpers\Extensions\ServiceCollectionExtension.cs
+E:\Finance\FinanceSportApi\FinanceSportApi\Program.cs
+E:\Finance\FinanceSportApi\FinanceSportApi\obj\Debug\net8.0\FinanceSportApi.GlobalUsings.g.cs
+E:\Finance\FinanceSportApi\FinanceSportApi\obj\Debug\net8.0\.NETCoreApp,Version=v8.0.AssemblyAttributes.cs
+E:\Finance\FinanceSportApi\FinanceSportApi\obj\Debug\net8.0\FinanceSportApi.AssemblyInfo.cs
+E:\Finance\FinanceSportApi\FinanceSportApi\obj\Debug\net8.0\FinanceSportApi.MvcApplicationPartsAssemblyInfo.cs
+E:\Finance\FinanceSportApi\FinanceSportApi\appsettings.Development.json
+E:\Finance\FinanceSportApi\FinanceSportApi\appsettings.json
+E:\Finance\FinanceSportApi\FinanceSportApi\FinanceSportApi.http
+E:\Finance\FinanceSportApi\FinanceSportApi\Properties\launchSettings.json
