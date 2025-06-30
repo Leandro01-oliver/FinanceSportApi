@@ -44,7 +44,7 @@ jobs:
       - name: Verificar resultado do Quality Gate
         id: quality
         run: |
-          if [ "${{ steps.análise-sonar.outputs.quality_gate_status }}" != "PASSED" ]; then
+          if [ "${{ steps.sonar.outputs.quality_gate_status }}" != "PASSED" ]; then
             echo "Quality Gate falhou"
             echo "fail=true" >> $GITHUB_OUTPUT
           else
