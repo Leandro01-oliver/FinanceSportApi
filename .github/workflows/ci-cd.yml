@@ -73,7 +73,7 @@ jobs:
             - Evite código duplicado e complexidade excessiva
             - Refaça o push após os ajustes
 
-      - name: Merge automático para develop
+      - name: Merge automático para developp
         if: steps.quality.outputs.fail == 'false'
         uses: devops-infra/action-pull-request@v0.5.0
         with:
