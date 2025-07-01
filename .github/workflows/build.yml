@@ -3,10 +3,10 @@ name: SonarQube
 on:
   push:
     branches:
-      - '**'  
+      - '**'
   pull_request:
     branches:
-      - '**' 
+      - '**'
 
 jobs:
   build:
@@ -19,7 +19,8 @@ jobs:
           java-version: 17
           distribution: 'zulu'
 
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -50,7 +51,7 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         shell: powershell
         run: |
-          .\.sonar\scanner\dotnet-sonarscanner begin /k:"Leandro01-oliver_FinanceSportApi" /o:"leandro01-oliver" /d:sonar.token="${{ secrets.SONAR_TOKEN }}" /d:sonar.host.url="https://sonarcloud.io"
+          .\.sonar\scanner\dotnet-sonarscanner begin /k:"Leandro01-oliver_FinanceSportApi" /o:"leandro01-oliver" /d:sonar.token="${{ secrets.SONAR_TOKEN }}" /d:sonar.host.url="https://sonarcloud.io" /d:sonar.verbose=true
 
       - name: Build project
         run: dotnet build
@@ -61,18 +62,26 @@ jobs:
         shell: powershell
         run: |
           .\.sonar\scanner\dotnet-sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
+          if (!(Test-Path ".sonar/report-task.txt")) {
+            Write-Error "Arquivo .sonar/report-task.txt não foi encontrado. A análise pode não ter sido enviada corretamente para o SonarCloud."
+            exit 1
+          }
 
       - name: Aguarda geração do relatório
         shell: bash
         run: |
           for i in {1..10}; do
             if [ -f ".sonar/report-task.txt" ]; then
-              echo "Relatório encontrado!"
+              echo "✅ Relatório encontrado!"
               break
             fi
-            echo "Aguardando geração de .sonar/report-task.txt..."
+            echo "⏳ Aguardando geração de .sonar/report-task.txt..."
             sleep 5
           done
+          if [ ! -f ".sonar/report-task.txt" ]; then
+            echo "❌ Erro: .sonar/report-task.txt não foi gerado."
+            exit 1
+          fi
 
       - name: Verificar Quality Gate
         id: quality
