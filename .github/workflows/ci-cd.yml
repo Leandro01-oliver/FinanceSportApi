@@ -15,10 +15,7 @@ jobs:
 
       - name: Testes com cobertura (somente arquivos relevantes)
         run: >
-          dotnet test FinanceSportApi.Test/FinanceSportApi.Test.csproj
-          --no-build
-          --collect:"XPlat Code Coverage"
-          --filter "FullyQualifiedName~InvestimentoTest|FullyQualifiedName~OrcamentoTest|FullyQualifiedName~TransacaoTest|FullyQualifiedName~UsuarioTest"
+          dotnet test"
 
       - name: Análise SonarCloud
         uses: SonarSource/sonarcloud-github-action@v2
