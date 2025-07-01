@@ -75,3 +75,7 @@ jobs:
           target_branch: develop
           title: "Merge automático: ${{ github.ref_name }} → develop"
           body: "Merge aprovado automaticamente após análise bem-sucedida no SonarCloud."
+          draft: false
+          get_diff: false
+          ignore_users: dependabot
+          allow_no_diff: true  
