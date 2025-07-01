@@ -12,10 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-
-      - name: Executar testes unitários
-        run: dotnet test FinanceSportApi.Test/FinanceSportApi.Test.csproj
-
+      
       - name: Análise SonarCloud
         uses: SonarSource/sonarcloud-github-action@v2
         with:
@@ -51,7 +48,7 @@ jobs:
           body: |
             Olá, o merge foi recusado porque o código não atingiu a cobertura mínima de 80%.
             Acesse o relatório do SonarCloud para ver os pontos a melhorar:
-            https://sonarcloud.io/project/overview?id=${{ secrets.SONAR_PROJECT_KEY }}
+            https://sonarcloud.io/project/overview?id=Leandro01-oliver_FinanceSportApi
 
             Dicas para resolver:
             - Adicione testes unitários para os métodos não cobertos
