@@ -12,6 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+
       
       - name: Análise SonarCloud
         uses: SonarSource/sonarcloud-github-action@v2
