@@ -62,7 +62,19 @@ jobs:
         run: |
           .\.sonar\scanner\dotnet-sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
 
-      - name: Espera pelo Quality Gate
+      - name: Aguarda geração do relatório
+        shell: bash
+        run: |
+          for i in {1..10}; do
+            if [ -f ".sonar/report-task.txt" ]; then
+              echo "Relatório encontrado!"
+              break
+            fi
+            echo "Aguardando geração de .sonar/report-task.txt..."
+            sleep 5
+          done
+
+      - name: Verificar Quality Gate
         id: quality
         uses: sonarsource/sonarqube-quality-gate-action@master
         with:
