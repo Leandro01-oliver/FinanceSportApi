@@ -5,7 +5,7 @@
         [Fact]
         public void Add()
         {
-
+            Assert.True(true);
         }
     }
 }
