@@ -13,9 +13,8 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Testes com cobertura (somente arquivos relevantes)
-        run: >
-          dotnet test"
+      - name: Executar testes unitários
+        run: dotnet test FinanceSportApi.Test/FinanceSportApi.Test.csproj
 
       - name: Análise SonarCloud
         uses: SonarSource/sonarcloud-github-action@v2
