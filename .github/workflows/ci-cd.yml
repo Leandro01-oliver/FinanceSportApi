@@ -21,8 +21,8 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         with:
           args: >
-            -Dsonar.projectKey=Leandro01-oliver_FinanceSportApi
-            -Dsonar.organization=LeandroX01
+            -Dsonar.projectKey=${{ secrets.SONAR_PROJECT_KEY }}
+            -Dsonar.organization=${{ secrets.SONAR_ORGANIZATION }}
             -Dsonar.cs.opencover.reportsPaths=**/coverage.opencover.xml
             -Dsonar.qualitygate.wait=true
 
