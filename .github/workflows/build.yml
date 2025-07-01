@@ -1,11 +1,12 @@
 name: SonarQube
 
 on:
-  push:
+ push:
     branches:
-      - master
-  pull_request:
-    types: [opened, synchronize, reopened]
+      - '**'  
+    pull_request:
+      branches:
+        - '**' 
 jobs:
   build:
     name: Build and analyze
@@ -46,3 +47,14 @@ jobs:
           .\.sonar\scanner\dotnet-sonarscanner begin /k:"Leandro01-oliver_FinanceSportApi" /o:"leandro01-oliver" /d:sonar.token="${{ secrets.SONAR_TOKEN }}" /d:sonar.host.url="https://sonarcloud.io"
           dotnet build
           .\.sonar\scanner\dotnet-sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
+
+      - name: Merge automático para developp
+        if: steps.quality.outputs.fail == 'false'
+        uses: devops-infra/action-pull-request@v0.5.0
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          source_branch: ${{ github.ref_name }}
+          target_branch: develop
+          title: "Merge automático: ${{ github.ref_name }} → develop"
+          body: "Merge aprovado automaticamente após passar no quality gate."
+          
