@@ -19,9 +19,9 @@ jobs:
       - name: Análise SonarCloud
         uses: SonarSource/sonarcloud-github-action@v2
         with:
-          projectKey: ${{ secrets.SONAR_PROJECT_KEY }}
-          organization: ${{ secrets.SONAR_ORGANIZATION }}
-          token: ${{ secrets.SONAR_TOKEN }}
+          projectKey: Leandro01-oliver_FinanceSportApi
+          organization: LeandroX01
+          token: bb0469035e9565141b29471f21432f27aa4c787c
           args: >
             -Dsonar.cs.opencover.reportsPaths=**/coverage.opencover.xml
             -Dsonar.qualitygate.wait=true
