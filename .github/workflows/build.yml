@@ -71,7 +71,7 @@ jobs:
         if: success()
         uses: devops-infra/action-pull-request@v0.5.0
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          github_token: ${{ secrets.TOKEN_GITHUB }}
           source_branch: ${{ github.ref_name }}
           target_branch: develop
           title: "Merge automático: ${{ github.ref_name }} → develop"
