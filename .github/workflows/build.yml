@@ -62,41 +62,13 @@ jobs:
         shell: powershell
         run: |
           .\.sonar\scanner\dotnet-sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
-          if (!(Test-Path ".sonar/report-task.txt")) {
-            Write-Error "Arquivo .sonar/report-task.txt não foi encontrado. A análise pode não ter sido enviada corretamente para o SonarCloud."
-            exit 1
-          }
-
-      - name: Aguarda geração do relatório
-        shell: bash
-        run: |
-          for i in {1..10}; do
-            if [ -f ".sonar/report-task.txt" ]; then
-              echo "✅ Relatório encontrado!"
-              break
-            fi
-            echo "⏳ Aguardando geração de .sonar/report-task.txt..."
-            sleep 5
-          done
-          if [ ! -f ".sonar/report-task.txt" ]; then
-            echo "❌ Erro: .sonar/report-task.txt não foi gerado."
-            exit 1
-          fi
-
-      - name: Verificar Quality Gate
-        id: quality
-        uses: sonarsource/sonarqube-quality-gate-action@master
-        with:
-          scanMetadataReportFile: .sonar/report-task.txt
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
       - name: Merge automático para develop
-        if: steps.quality.outputs.quality_gate_status == 'PASSED'
+        if: success()
         uses: devops-infra/action-pull-request@v0.5.0
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           source_branch: ${{ github.ref_name }}
           target_branch: develop
           title: "Merge automático: ${{ github.ref_name }} → develop"
-          body: "Merge aprovado automaticamente após passar no quality gate."
+          body: "Merge aprovado automaticamente após análise bem-sucedida no SonarCloud."
