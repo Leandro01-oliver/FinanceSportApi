@@ -1,33 +1,36 @@
 name: CI/CD com Qualidade
 
 on:
- push:
+  push:
     branches:
-      - '**'  
-    pull_request:
-      branches:
-        - '**'  
+      - '**'
+  pull_request:
+    branches:
+      - '**'
+
 jobs:
   build-test-analyze:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
 
-      
+      # Análise de código com SonarCloud
       - name: Análise SonarCloud
         uses: SonarSource/sonarcloud-github-action@v2
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         with:
-          projectKey: Leandro01-oliver_FinanceSportApi
-          organization: LeandroX01
-          token: bb0469035e9565141b29471f21432f27aa4c787c
           args: >
+            -Dsonar.projectKey=Leandro01-oliver_FinanceSportApi
+            -Dsonar.organization=LeandroX01
             -Dsonar.cs.opencover.reportsPaths=**/coverage.opencover.xml
             -Dsonar.qualitygate.wait=true
 
+      # Verificar se passou no Quality Gate
       - name: Verificar resultado do Quality Gate
         id: quality
         run: |
-          if [ "${{ steps.sonar.outputs.quality_gate_status }}" != "PASSED" ]; then
+          if [ "${{ steps.sonarcloud.outputs.quality_gate_status }}" != "PASSED" ]; then
             echo "Quality Gate falhou"
             echo "fail=true" >> $GITHUB_OUTPUT
           else
@@ -35,6 +38,7 @@ jobs:
             echo "fail=false" >> $GITHUB_OUTPUT
           fi
 
+      # Notificar por e-mail se a análise falhar
       - name: Enviar e-mail se falhar
         if: steps.quality.outputs.fail == 'true'
         uses: dawidd6/action-send-mail@v3
@@ -56,7 +60,8 @@ jobs:
             - Evite código duplicado e complexidade excessiva
             - Refaça o push após os ajustes
 
-      - name: Merge automático para developp
+      # Fazer merge automático se passou no Quality Gate
+      - name: Merge automático para develop
         if: steps.quality.outputs.fail == 'false'
         uses: devops-infra/action-pull-request@v0.5.0
         with:
