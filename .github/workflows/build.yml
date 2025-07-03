@@ -91,8 +91,8 @@ jobs:
       - name: Send rejection email
         uses: dawidd6/action-send-mail@v3
         with:
-          server_address: smtp.seuservidor.com
-          server_port: 587
+          server_address: ${{ secrets.SMTP_HOST }}
+          server_port: ${{ secrets.SMTP_PORT }}
           username: ${{ secrets.SMTP_USERNAME }}
           password: ${{ secrets.SMTP_PASSWORD }}
           subject: "Branch '${{ github.ref_name }}' rejeitada após falha no SonarCloud"
@@ -131,8 +131,8 @@ jobs:
       - name: Send success email
         uses: dawidd6/action-send-mail@v3
         with:
-          server_address: smtp.seuservidor.com
-          server_port: 587
+          server_address: ${{ secrets.SMTP_HOST }}
+          server_port: ${{ secrets.SMTP_PORT }}
           username: ${{ secrets.SMTP_USERNAME }}
           password: ${{ secrets.SMTP_PASSWORD }}
           subject: "Pull request aberto para '${{ github.ref_name }}' após sucesso no SonarCloud"
