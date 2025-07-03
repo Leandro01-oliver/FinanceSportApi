@@ -71,6 +71,8 @@ jobs:
     runs-on: ubuntu-latest
     needs: sonar-analysis
     if: failure()  # Executa apenas se sonar-analysis falhar
+    env:
+      GITHUB_TOKEN: ${{ secrets.GH_PAT }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -124,6 +126,8 @@ jobs:
     runs-on: ubuntu-latest
     needs: sonar-analysis
     if: success() && github.ref != 'refs/heads/develop' && github.ref != 'refs/heads/master' && github.ref != 'refs/heads/homologacao'  # Só executa se sonar-analysis for bem-sucedido e não for uma branch protegida
+    env:
+      GITHUB_TOKEN: ${{ secrets.GH_PAT }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -182,6 +186,8 @@ jobs:
             **Branch:** ${{ github.ref_name }}
             **Autor:** ${{ github.actor }}
             **Data:** ${{ github.event.head_commit.timestamp }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
       
       - name: Merge PR automaticamente (se existir)
         if: steps.check-pr.outputs.pr-exists == 'true'
