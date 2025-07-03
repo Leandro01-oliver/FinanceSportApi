@@ -279,9 +279,9 @@ jobs:
           script: |
             try {
               // Obter o número do PR do job anterior
-              const prNumber = ${{ needs.open-pull-request.outputs.pr-number }};
+              const prNumber = '${{ needs.open-pull-request.outputs.pr-number }}';
               
-              if (!prNumber) {
+              if (!prNumber || prNumber === '') {
                 core.warning('Número do PR não encontrado, tentando buscar pela API...');
                 
                 // Fallback: buscar o PR pela API
