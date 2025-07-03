@@ -87,6 +87,11 @@ git push origin test/workflow-fix
 - Configuração manual do remote com PAT para operações Git
 - Verifique se o `GH_PAT` tem permissão `repo`
 
+### Erro: "Bad credentials" em actions de PR
+**Solução:** ✅ **CORRIGIDO**
+- Configuração de `GITHUB_TOKEN` como variável de ambiente nos jobs
+- Uso do `GH_PAT` em todas as actions que precisam de permissões amplas
+
 ### Erro: "Bad credentials (401)"
 **Solução:** ✅ **CORRIGIDO**
 - Tratamento de erro robusto implementado

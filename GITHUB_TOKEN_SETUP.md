@@ -87,6 +87,10 @@ O token deve ter acesso a:
 - ✅ **CORRIGIDO:** Configuração manual do remote com PAT
 - ✅ Verifique se o `GH_PAT` tem permissão `repo` (Full control)
 
+### Erro: "Bad credentials" em actions de PR
+- ✅ **CORRIGIDO:** Configuração de `GITHUB_TOKEN` como variável de ambiente
+- ✅ **CORRIGIDO:** Uso do `GH_PAT` em todas as actions que precisam de permissões amplas
+
 ### Erro: "No open PR found to merge"
 - ✅ Normal se não houver PR existente
 - ✅ O workflow criará um novo PR automaticamente
