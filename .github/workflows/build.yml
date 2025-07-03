@@ -9,8 +9,8 @@ on:
       - '**'
 
 jobs:
-  build:
-    name: Build and analyze
+  sonar-analysis:
+    name: SonarQube Analysis
     runs-on: ubuntu-latest
     steps:
       - name: Set up JDK 17
@@ -66,8 +66,61 @@ jobs:
           .sonar/scanner/dotnet-sonarscanner end \
             /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
 
+  revert-or-delete-branch:
+    name: Revert or Delete Branch on Sonar Failure
+    runs-on: ubuntu-latest
+    needs: sonar-analysis
+    if: failure()  # Executa apenas se sonar-analysis falhar
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Delete branch if not protected
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          BRANCH_NAME="${GITHUB_REF#refs/heads/}"
+          echo "Branch atual: $BRANCH_NAME"
+          if [[ "$BRANCH_NAME" != "develop" && "$BRANCH_NAME" != "homologacao" && "$BRANCH_NAME" != "master" && "$BRANCH_NAME" != hotfix* ]]; then
+            echo "Excluindo branch remota $BRANCH_NAME..."
+            git push origin --delete "$BRANCH_NAME"
+          else
+            echo "Branch protegida ($BRANCH_NAME), não será excluída."
+          fi
+      - name: Send rejection email
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.seuservidor.com
+          server_port: 587
+          username: ${{ secrets.SMTP_USERNAME }}
+          password: ${{ secrets.SMTP_PASSWORD }}
+          subject: "Branch '${{ github.ref_name }}' rejeitada após falha no SonarCloud"
+          to: dev@email.com
+          from: "CI Bot <ci@email.com>"
+          body: |
+            Olá,
+
+            Sua branch '${{ github.ref_name }}' foi excluída automaticamente porque falhou na análise do SonarCloud.
+
+            Veja o relatório do SonarCloud para detalhes: https://sonarcloud.io/project/overview?id=Leandro01-oliver_FinanceSportApi
+
+            Motivo: Falha na análise de qualidade de código.
+
+            Atenciosamente,
+            CI/CD Pipeline
+
+  open-pull-request:
+    name: Open Pull Request to develop
+    runs-on: ubuntu-latest
+    needs: sonar-analysis
+    if: success()  # Só executa se sonar-analysis for bem-sucedido
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Merge automático para develop
-        if: success()
         uses: devops-infra/action-pull-request@v0.5.0
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
@@ -75,3 +128,45 @@ jobs:
           target_branch: develop
           title: "Merge automático: ${{ github.ref_name }} → develop"
           body: "Merge aprovado automaticamente após análise bem-sucedida no SonarCloud."
+      - name: Send success email
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.seuservidor.com
+          server_port: 587
+          username: ${{ secrets.SMTP_USERNAME }}
+          password: ${{ secrets.SMTP_PASSWORD }}
+          subject: "Pull request aberto para '${{ github.ref_name }}' após sucesso no SonarCloud"
+          to: dev@email.com
+          from: "CI Bot <ci@email.com>"
+          body: |
+            Olá,
+
+            Foi aberto um pull request para a branch '${{ github.ref_name }}' direcionado ao responsável (fulano de tal), após sucesso na análise do SonarCloud.
+
+            Veja o relatório do SonarCloud para detalhes: https://sonarcloud.io/project/overview?id=Leandro01-oliver_FinanceSportApi
+
+            Atenciosamente,
+            CI/CD Pipeline
+      - name: Merge PR automaticamente
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const { data: pulls } = await github.rest.pulls.list({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              head: `${context.repo.owner}:${context.ref.replace('refs/heads/', '')}`,
+              state: 'open',
+            });
+            if (pulls.length > 0) {
+              const pr = pulls[0];
+              await github.rest.pulls.merge({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: pr.number,
+                merge_method: 'merge',
+              });
+              core.info(`PR #${pr.number} merged successfully.`);
+            } else {
+              core.setFailed('No open PR found to merge.');
+            }
