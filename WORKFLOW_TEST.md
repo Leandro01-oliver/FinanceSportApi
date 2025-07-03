@@ -6,24 +6,19 @@
 
 **Correções aplicadas:**
 
-1. **Configuração Git Automática**
-   ```yaml
-   - name: Configure Git credentials
-     run: |
-       git config --global user.name "github-actions[bot]"
-       git config --global user.email "github-actions[bot]@users.noreply.github.com"
-       git config --global credential.helper store
-       echo "https://x-access-token:${{ secrets.GH_PAT }}@github.com" > ~/.git-credentials
-   ```
-
-2. **Checkout Otimizado**
+1. **Configuração Git Correta**
    ```yaml
    - name: Checkout code
      uses: actions/checkout@v4
      with:
        fetch-depth: 0
-       token: ${{ secrets.GH_PAT }}
-       ssh-strict: false
+       token: ${{ secrets.GITHUB_TOKEN }}
+   
+   - name: Configure Git for PAT operations
+     run: |
+       git config --global user.name "github-actions[bot]"
+       git config --global user.email "github-actions[bot]@users.noreply.github.com"
+       git remote set-url origin https://x-access-token:${{ secrets.GH_PAT }}@github.com/${{ github.repository }}.git
    ```
 
 ## 🚀 Como Testar
@@ -88,7 +83,8 @@ git push origin test/workflow-fix
 
 ### Erro: "could not read Username for 'https://github.com'"
 **Solução:** ✅ **CORRIGIDO**
-- O workflow agora configura automaticamente as credenciais Git
+- Uso do `GITHUB_TOKEN` para checkout inicial (sem problemas de autenticação)
+- Configuração manual do remote com PAT para operações Git
 - Verifique se o `GH_PAT` tem permissão `repo`
 
 ### Erro: "Bad credentials (401)"

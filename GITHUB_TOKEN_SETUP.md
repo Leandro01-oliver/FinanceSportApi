@@ -12,8 +12,8 @@ O erro **"Bad credentials (401)"** foi corrigido com as seguintes melhorias no w
    - Logs informativos para debug
 
 2. **Configuração Git Correta**
-   - Configuração automática de credenciais Git
-   - Uso correto do token para autenticação HTTPS
+   - Uso do `GITHUB_TOKEN` para checkout inicial
+   - Configuração manual do remote com PAT para operações Git
    - Configuração de usuário para commits automáticos
 
 3. **Verificação de PR Existente**
@@ -83,9 +83,9 @@ O token deve ter acesso a:
 - ✅ Verifique se tem as permissões necessárias
 
 ### Erro: "could not read Username for 'https://github.com'"
-- ✅ Verifique se o `GH_PAT` está configurado corretamente
-- ✅ Confirme se o token tem permissão `repo` (Full control)
-- ✅ O workflow agora configura automaticamente as credenciais Git
+- ✅ **CORRIGIDO:** Uso do `GITHUB_TOKEN` para checkout inicial
+- ✅ **CORRIGIDO:** Configuração manual do remote com PAT
+- ✅ Verifique se o `GH_PAT` tem permissão `repo` (Full control)
 
 ### Erro: "No open PR found to merge"
 - ✅ Normal se não houver PR existente
