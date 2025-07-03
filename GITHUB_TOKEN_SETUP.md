@@ -11,16 +11,21 @@ O erro **"Bad credentials (401)"** foi corrigido com as seguintes melhorias no w
    - O workflow não falha mais por problemas de credenciais
    - Logs informativos para debug
 
-2. **Verificação de PR Existente**
+2. **Configuração Git Correta**
+   - Configuração automática de credenciais Git
+   - Uso correto do token para autenticação HTTPS
+   - Configuração de usuário para commits automáticos
+
+3. **Verificação de PR Existente**
    - Verifica se já existe um PR antes de criar um novo
    - Evita duplicação de pull requests
    - Processa PRs existentes automaticamente
 
-3. **Condições de Execução Melhoradas**
+4. **Condições de Execução Melhoradas**
    - Não executa em branches protegidas (develop, master, homologacao)
    - Evita loops infinitos de merge
 
-4. **Merge Inteligente**
+5. **Merge Inteligente**
    - Verifica se o PR pode ser mergeado antes de tentar
    - Trata conflitos e checks pendentes
    - Mensagens de commit mais informativas
@@ -76,6 +81,11 @@ O token deve ter acesso a:
 - ✅ Verifique se o `GH_PAT` está configurado corretamente
 - ✅ Confirme se o token não expirou
 - ✅ Verifique se tem as permissões necessárias
+
+### Erro: "could not read Username for 'https://github.com'"
+- ✅ Verifique se o `GH_PAT` está configurado corretamente
+- ✅ Confirme se o token tem permissão `repo` (Full control)
+- ✅ O workflow agora configura automaticamente as credenciais Git
 
 ### Erro: "No open PR found to merge"
 - ✅ Normal se não houver PR existente
