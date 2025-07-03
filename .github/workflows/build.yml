@@ -170,6 +170,7 @@ jobs:
       
       - name: Criar Pull Request (se não existir)
         if: steps.check-pr.outputs.pr-exists == 'false'
+        id: create-pr
         uses: devops-infra/action-pull-request@v0.5.0
         with:
           github_token: ${{ secrets.GH_PAT }}
@@ -188,6 +189,44 @@ jobs:
             **Data:** ${{ github.event.head_commit.timestamp }}
         env:
           GITHUB_TOKEN: ${{ secrets.GH_PAT }}
+      
+      - name: Obter número do PR criado
+        if: steps.check-pr.outputs.pr-exists == 'false'
+        id: get-pr-number
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GH_PAT }}
+          script: |
+            try {
+              // Aguardar um pouco para o PR ser criado
+              await new Promise(resolve => setTimeout(resolve, 5000));
+              
+              const { data: pulls } = await github.rest.pulls.list({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                head: `${context.repo.owner}:${context.ref.replace('refs/heads/', '')}`,
+                state: 'open',
+              });
+              
+              if (pulls.length > 0) {
+                const prNumber = pulls[0].number;
+                core.setOutput('pr-number', prNumber);
+                core.info(`PR #${prNumber} criado com sucesso`);
+              } else {
+                core.warning('PR não encontrado após criação');
+              }
+            } catch (error) {
+              core.error(`Erro ao obter número do PR: ${error.message}`);
+            }
+      
+      - name: Output PR number for auto-merge
+        if: steps.check-pr.outputs.pr-exists == 'true' || steps.get-pr-number.outputs.pr-number
+        run: |
+          if [[ "${{ steps.check-pr.outputs.pr-exists }}" == "true" ]]; then
+            echo "pr-number=${{ steps.check-pr.outputs.pr-number }}" >> $GITHUB_OUTPUT
+          else
+            echo "pr-number=${{ steps.get-pr-number.outputs.pr-number }}" >> $GITHUB_OUTPUT
+          fi
       
       - name: Send success email
         uses: dawidd6/action-send-mail@v3
@@ -233,83 +272,105 @@ jobs:
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git remote set-url origin https://x-access-token:${{ secrets.GH_PAT }}@github.com/${{ github.repository }}.git
       
-      - name: Aguardar e tentar merge automático
+      - name: Fazer merge automático do PR
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GH_PAT }}
           script: |
             try {
-              // Aguardar um pouco para garantir que o PR foi criado/atualizado
-              await new Promise(resolve => setTimeout(resolve, 10000));
+              // Obter o número do PR do job anterior
+              const prNumber = ${{ needs.open-pull-request.outputs.pr-number }};
               
-              // Buscar o PR para a branch atual
-              const { data: pulls } = await github.rest.pulls.list({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                head: `${context.repo.owner}:${context.ref.replace('refs/heads/', '')}`,
-                state: 'open',
-              });
-              
-              if (pulls.length === 0) {
-                core.warning('Nenhum PR encontrado para merge automático');
-                return;
-              }
-              
-              const pr = pulls[0];
-              core.info(`Tentando fazer merge do PR #${pr.number}...`);
-              
-              // Aguardar mais um pouco para o GitHub calcular o status de merge
-              await new Promise(resolve => setTimeout(resolve, 5000));
-              
-              // Buscar o PR atualizado para verificar o status
-              const { data: updatedPr } = await github.rest.pulls.get({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                pull_number: pr.number,
-              });
-              
-              core.info(`Status do PR #${updatedPr.number}: mergeable=${updatedPr.mergeable}, state=${updatedPr.state}, draft=${updatedPr.draft}`);
-              
-              if (updatedPr.mergeable === true && updatedPr.state === 'open' && !updatedPr.draft) {
-                // Verificar se há checks pendentes
-                const { data: checks } = await github.rest.checks.listForRef({
+              if (!prNumber) {
+                core.warning('Número do PR não encontrado, tentando buscar pela API...');
+                
+                // Fallback: buscar o PR pela API
+                const { data: pulls } = await github.rest.pulls.list({
                   owner: context.repo.owner,
                   repo: context.repo.repo,
-                  ref: updatedPr.head.sha,
+                  head: `${context.repo.owner}:${context.ref.replace('refs/heads/', '')}`,
+                  state: 'open',
                 });
                 
-                const pendingChecks = checks.check_runs.filter(check => 
-                  check.status === 'in_progress' || check.status === 'queued'
-                );
-                
-                if (pendingChecks.length > 0) {
-                  core.warning(`PR #${updatedPr.number} tem checks pendentes: ${pendingChecks.map(c => c.name).join(', ')}`);
+                if (pulls.length === 0) {
+                  core.warning('Nenhum PR encontrado para merge automático');
                   return;
                 }
                 
-                // Fazer o merge
-                await github.rest.pulls.merge({
+                const pr = pulls[0];
+                core.info(`PR encontrado via API: #${pr.number}`);
+                
+                // Aguardar para o GitHub calcular o status de merge
+                await new Promise(resolve => setTimeout(resolve, 5000));
+                
+                // Buscar o PR atualizado
+                const { data: updatedPr } = await github.rest.pulls.get({
                   owner: context.repo.owner,
                   repo: context.repo.repo,
-                  pull_number: updatedPr.number,
-                  merge_method: 'merge',
-                  commit_title: `Merge automático: ${context.ref.replace('refs/heads/', '')} → develop`,
-                  commit_message: `Merge automático após análise bem-sucedida no SonarCloud\n\n- Branch: ${context.ref.replace('refs/heads/', '')}\n- Autor: ${context.actor}\n- Análise: https://sonarcloud.io/project/overview?id=Leandro01-oliver_FinanceSportApi`
+                  pull_number: pr.number,
                 });
-                core.info(`PR #${updatedPr.number} mergeado com sucesso!`);
-              } else if (updatedPr.mergeable === false) {
-                core.warning(`PR #${updatedPr.number} não pode ser mergeado (conflitos ou checks pendentes)`);
-              } else if (updatedPr.draft) {
-                core.warning(`PR #${updatedPr.number} é um draft e não pode ser mergeado automaticamente`);
-              } else if (updatedPr.state !== 'open') {
-                core.warning(`PR #${updatedPr.number} não está aberto (state: ${updatedPr.state})`);
+                
+                await attemptMerge(updatedPr);
               } else {
-                core.warning(`Status de merge do PR #${updatedPr.number} é desconhecido (mergeable: ${updatedPr.mergeable})`);
+                core.info(`Usando PR #${prNumber} para merge automático`);
+                
+                // Aguardar para o GitHub calcular o status de merge
+                await new Promise(resolve => setTimeout(resolve, 5000));
+                
+                // Buscar o PR
+                const { data: pr } = await github.rest.pulls.get({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  pull_number: parseInt(prNumber),
+                });
+                
+                await attemptMerge(pr);
               }
-                         } catch (error) {
-               core.error(`Erro ao fazer merge do PR: ${error.message}`);
-               // Não falhar o workflow por erro de merge
-             }
+              
+              async function attemptMerge(pr) {
+                core.info(`Status do PR #${pr.number}: mergeable=${pr.mergeable}, state=${pr.state}, draft=${pr.draft}`);
+                
+                if (pr.mergeable === true && pr.state === 'open' && !pr.draft) {
+                  // Verificar se há checks pendentes
+                  const { data: checks } = await github.rest.checks.listForRef({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    ref: pr.head.sha,
+                  });
+                  
+                  const pendingChecks = checks.check_runs.filter(check => 
+                    check.status === 'in_progress' || check.status === 'queued'
+                  );
+                  
+                  if (pendingChecks.length > 0) {
+                    core.warning(`PR #${pr.number} tem checks pendentes: ${pendingChecks.map(c => c.name).join(', ')}`);
+                    return;
+                  }
+                  
+                  // Fazer o merge
+                  await github.rest.pulls.merge({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    pull_number: pr.number,
+                    merge_method: 'merge',
+                    commit_title: `Merge automático: ${context.ref.replace('refs/heads/', '')} → develop`,
+                    commit_message: `Merge automático após análise bem-sucedida no SonarCloud\n\n- Branch: ${context.ref.replace('refs/heads/', '')}\n- Autor: ${context.actor}\n- Análise: https://sonarcloud.io/project/overview?id=Leandro01-oliver_FinanceSportApi`
+                  });
+                  core.info(`PR #${pr.number} mergeado com sucesso!`);
+                } else if (pr.mergeable === false) {
+                  core.warning(`PR #${pr.number} não pode ser mergeado (conflitos ou checks pendentes)`);
+                } else if (pr.draft) {
+                  core.warning(`PR #${pr.number} é um draft e não pode ser mergeado automaticamente`);
+                } else if (pr.state !== 'open') {
+                  core.warning(`PR #${pr.number} não está aberto (state: ${pr.state})`);
+                } else {
+                  core.warning(`Status de merge do PR #${pr.number} é desconhecido (mergeable: ${pr.mergeable})`);
+                }
+              }
+            } catch (error) {
+              core.error(`Erro ao fazer merge do PR: ${error.message}`);
+              // Não falhar o workflow por erro de merge
+            }
       
       - name: Send merge success email
         if: success()
