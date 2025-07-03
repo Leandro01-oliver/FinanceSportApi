@@ -96,8 +96,8 @@ jobs:
           username: ${{ secrets.SMTP_USERNAME }}
           password: ${{ secrets.SMTP_PASSWORD }}
           subject: "Branch '${{ github.ref_name }}' rejeitada após falha no SonarCloud"
-          to: dev@email.com
-          from: "CI Bot <ci@email.com>"
+          to: ${{ secrets.MAIL_TO }}
+          from: ${{ secrets.MAIL_FROM }}
           body: |
             Olá,
 
@@ -136,8 +136,8 @@ jobs:
           username: ${{ secrets.SMTP_USERNAME }}
           password: ${{ secrets.SMTP_PASSWORD }}
           subject: "Pull request aberto para '${{ github.ref_name }}' após sucesso no SonarCloud"
-          to: dev@email.com
-          from: "CI Bot <ci@email.com>"
+          to: ${{ secrets.MAIL_TO }}
+          from: ${{ secrets.MAIL_FROM }}
           body: |
             Olá,
 
