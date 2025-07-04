@@ -150,16 +150,10 @@ jobs:
             try {
               console.log('Verificando se já existe PR para esta branch...');
               
-              // Configuração do Octokit
-              const { Octokit } = require('@octokit/rest');
-              const octokit = new Octokit({
-                auth: process.env.GITHUB_TOKEN,
-              });
-              
               // Verificar se o repositório existe
               console.log(`Verificando repositório: ${context.repo.owner}/${context.repo.repo}`);
               try {
-                await octokit.rest.repos.get({
+                await github.rest.repos.get({
                   owner: context.repo.owner,
                   repo: context.repo.repo,
                 });
@@ -173,7 +167,7 @@ jobs:
               console.log(`Buscando PRs da branch: ${branch}`);
               
               // Listar PRs da branch especificada
-              const { data: pulls } = await octokit.rest.pulls.list({
+              const { data: pulls } = await github.rest.pulls.list({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 head: `${context.repo.owner}:${branch}`,
@@ -250,17 +244,11 @@ jobs:
               // Aguardar um pouco para o PR ser criado
               await new Promise(resolve => setTimeout(resolve, 5000));
               
-              // Configuração do Octokit
-              const { Octokit } = require('@octokit/rest');
-              const octokit = new Octokit({
-                auth: process.env.GITHUB_TOKEN,
-              });
-              
               const branch = context.ref.replace('refs/heads/', '');
               console.log(`Buscando PR recém-criado da branch: ${branch}`);
               
               // Listar PRs da branch especificada
-              const { data: pulls } = await octokit.rest.pulls.list({
+              const { data: pulls } = await github.rest.pulls.list({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 head: `${context.repo.owner}:${branch}`,
@@ -364,16 +352,11 @@ jobs:
               if (!prNumber || prNumber === '') {
                 core.warning('Número do PR não encontrado, tentando buscar pela API...');
                 
-                // Fallback: buscar o PR pela API usando Octokit
-                const { Octokit } = require('@octokit/rest');
-                const octokit = new Octokit({
-                  auth: process.env.GITHUB_TOKEN,
-                });
-                
+                // Fallback: buscar o PR pela API
                 const branch = context.ref.replace('refs/heads/', '');
                 console.log(`Buscando PR da branch: ${branch} via API...`);
                 
-                const { data: pulls } = await octokit.rest.pulls.list({
+                const { data: pulls } = await github.rest.pulls.list({
                   owner: context.repo.owner,
                   repo: context.repo.repo,
                   head: `${context.repo.owner}:${branch}`,
@@ -401,7 +384,7 @@ jobs:
                 await new Promise(resolve => setTimeout(resolve, 5000));
                 
                 // Buscar o PR atualizado
-                const { data: updatedPr } = await octokit.rest.pulls.get({
+                const { data: updatedPr } = await github.rest.pulls.get({
                   owner: context.repo.owner,
                   repo: context.repo.repo,
                   pull_number: pr.number,
@@ -414,13 +397,8 @@ jobs:
                 // Aguardar para o GitHub calcular o status de merge
                 await new Promise(resolve => setTimeout(resolve, 5000));
                 
-                // Buscar o PR usando Octokit
-                const { Octokit } = require('@octokit/rest');
-                const octokit = new Octokit({
-                  auth: process.env.GITHUB_TOKEN,
-                });
-                
-                const { data: pr } = await octokit.rest.pulls.get({
+                // Buscar o PR
+                const { data: pr } = await github.rest.pulls.get({
                   owner: context.repo.owner,
                   repo: context.repo.repo,
                   pull_number: parseInt(prNumber),
