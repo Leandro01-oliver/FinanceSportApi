@@ -230,6 +230,15 @@ jobs:
             **Data:** ${{ github.event.head_commit.timestamp }}
         env:
           GITHUB_TOKEN: ${{ secrets.GH_PAT }}
+        continue-on-error: true
+      
+      - name: Verificar se PR foi criado
+        if: steps.check-pr.outputs.pr-exists == 'false'
+        run: |
+          echo "=== VERIFICANDO CRIAÇÃO DO PR ==="
+          echo "Step create-pr result: ${{ steps.create-pr.outcome }}"
+          echo "Step create-pr conclusion: ${{ steps.create-pr.conclusion }}"
+          echo "=================================="
       
       - name: Obter número do PR criado
         if: steps.check-pr.outputs.pr-exists == 'false'
@@ -241,8 +250,8 @@ jobs:
             try {
               console.log('Aguardando criação do PR e obtendo número...');
               
-              // Aguardar um pouco para o PR ser criado
-              await new Promise(resolve => setTimeout(resolve, 5000));
+              // Aguardar mais tempo para o PR ser criado
+              await new Promise(resolve => setTimeout(resolve, 10000));
               
               const branch = context.ref.replace('refs/heads/', '');
               console.log(`Buscando PR recém-criado da branch: ${branch}`);
@@ -264,6 +273,7 @@ jobs:
                   console.log(`   URL: ${pr.html_url}`);
                   console.log(`   Status: ${pr.state}`);
                   console.log(`   Criado por: ${pr.user.login}`);
+                  console.log(`   Criado em: ${pr.created_at}`);
                   console.log('---');
                 });
                 
@@ -273,6 +283,26 @@ jobs:
                 core.info(`PR #${pr.number} criado com sucesso`);
               } else {
                 console.log('Nenhum PR encontrado após criação.');
+                console.log('Verificando se há PRs fechados ou drafts...');
+                
+                // Verificar se há PRs fechados ou drafts
+                const { data: allPulls } = await github.rest.pulls.list({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  head: `${context.repo.owner}:${branch}`,
+                  state: 'all',
+                });
+                
+                if (allPulls.length > 0) {
+                  console.log(`Encontrados ${allPulls.length} PR(s) (incluindo fechados):`);
+                  allPulls.forEach((pr, index) => {
+                    console.log(`${index + 1}. PR #${pr.number}: ${pr.title} (${pr.state})`);
+                    console.log(`   URL: ${pr.html_url}`);
+                    console.log(`   Draft: ${pr.draft}`);
+                    console.log('---');
+                  });
+                }
+                
                 core.warning('PR não encontrado após criação');
               }
             } catch (error) {
@@ -388,7 +418,37 @@ jobs:
                 
                 if (pulls.length === 0) {
                   core.warning('Nenhum PR encontrado para merge automático');
-                  return;
+                  core.info('Tentando criar PR automaticamente...');
+                  
+                  // Tentar criar o PR diretamente
+                  try {
+                    const { data: newPr } = await github.rest.pulls.create({
+                      owner: context.repo.owner,
+                      repo: context.repo.repo,
+                      head: branch,
+                      base: 'develop',
+                      title: `Merge automático: ${branch} → develop`,
+                      body: `Merge automático após análise bem-sucedida no SonarCloud.\n\n**Análise de Qualidade:**\n- ✅ SonarCloud: Aprovado\n- 📊 Relatório: https://sonarcloud.io/project/overview?id=Leandro01-oliver_FinanceSportApi\n\n**Branch:** ${branch}\n**Autor:** ${context.actor}`
+                    });
+                    
+                    core.info(`PR #${newPr.number} criado com sucesso!`);
+                    
+                    // Aguardar para o GitHub calcular o status de merge
+                    await new Promise(resolve => setTimeout(resolve, 15000));
+                    
+                    // Buscar o PR atualizado
+                    const { data: updatedPr } = await github.rest.pulls.get({
+                      owner: context.repo.owner,
+                      repo: context.repo.repo,
+                      pull_number: newPr.number,
+                    });
+                    
+                    await attemptMerge(updatedPr);
+                    return;
+                  } catch (createError) {
+                    core.error(`Erro ao criar PR: ${createError.message}`);
+                    return;
+                  }
                 }
                 
                 console.log(`\nEncontrados ${pulls.length} PR(s) abertos:`);
