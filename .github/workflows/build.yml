@@ -148,22 +148,69 @@ jobs:
           github-token: ${{ secrets.GH_PAT }}
           script: |
             try {
-              const { data: pulls } = await github.rest.pulls.list({
+              console.log('Verificando se já existe PR para esta branch...');
+              
+              // Configuração do Octokit
+              const { Octokit } = require('@octokit/rest');
+              const octokit = new Octokit({
+                auth: process.env.GITHUB_TOKEN,
+              });
+              
+              // Verificar se o repositório existe
+              console.log(`Verificando repositório: ${context.repo.owner}/${context.repo.repo}`);
+              try {
+                await octokit.rest.repos.get({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                });
+                console.log('Repositório encontrado!');
+              } catch (error) {
+                console.error(`Repositório ${context.repo.owner}/${context.repo.repo} não encontrado.`);
+                throw error;
+              }
+              
+              const branch = context.ref.replace('refs/heads/', '');
+              console.log(`Buscando PRs da branch: ${branch}`);
+              
+              // Listar PRs da branch especificada
+              const { data: pulls } = await octokit.rest.pulls.list({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
-                head: `${context.repo.owner}:${context.ref.replace('refs/heads/', '')}`,
+                head: `${context.repo.owner}:${branch}`,
                 state: 'open',
               });
               
+              console.log(`\nPRs da branch ${branch} no repositório ${context.repo.owner}/${context.repo.repo}:`);
+              
               if (pulls.length > 0) {
+                console.log(`\nEncontrados ${pulls.length} PR(s) abertos:`);
+                pulls.forEach((pr, index) => {
+                  console.log(`${index + 1}. PR #${pr.number}: ${pr.title}`);
+                  console.log(`   URL: ${pr.html_url}`);
+                  console.log(`   Status: ${pr.state}`);
+                  console.log(`   Criado por: ${pr.user.login}`);
+                  console.log('---');
+                });
+                
+                // Usar o primeiro PR encontrado
+                const pr = pulls[0];
                 core.setOutput('pr-exists', 'true');
-                core.setOutput('pr-number', pulls[0].number);
-                core.info(`PR #${pulls[0].number} já existe`);
+                core.setOutput('pr-number', pr.number);
+                core.info(`PR #${pr.number} já existe e será usado`);
               } else {
+                console.log('Nenhum PR aberto encontrado para esta branch.');
                 core.setOutput('pr-exists', 'false');
                 core.info('Nenhum PR encontrado, criando novo...');
               }
             } catch (error) {
+              console.error('Erro ao listar PRs:', error.message);
+              if (error.status === 401) {
+                console.error('Erro de autenticação. Verifique se o token está configurado corretamente.');
+              } else if (error.status === 404) {
+                console.error('Repositório não encontrado. Verifique se o owner e repo estão corretos.');
+              } else if (error.status === 403) {
+                console.error('Acesso negado. Este repositório pode ser privado. Configure um token do GitHub.');
+              }
               core.warning(`Erro ao verificar PRs existentes: ${error.message}`);
               core.setOutput('pr-exists', 'false');
             }
@@ -198,24 +245,57 @@ jobs:
           github-token: ${{ secrets.GH_PAT }}
           script: |
             try {
+              console.log('Aguardando criação do PR e obtendo número...');
+              
               // Aguardar um pouco para o PR ser criado
               await new Promise(resolve => setTimeout(resolve, 5000));
               
-              const { data: pulls } = await github.rest.pulls.list({
+              // Configuração do Octokit
+              const { Octokit } = require('@octokit/rest');
+              const octokit = new Octokit({
+                auth: process.env.GITHUB_TOKEN,
+              });
+              
+              const branch = context.ref.replace('refs/heads/', '');
+              console.log(`Buscando PR recém-criado da branch: ${branch}`);
+              
+              // Listar PRs da branch especificada
+              const { data: pulls } = await octokit.rest.pulls.list({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
-                head: `${context.repo.owner}:${context.ref.replace('refs/heads/', '')}`,
+                head: `${context.repo.owner}:${branch}`,
                 state: 'open',
               });
               
+              console.log(`\nPRs da branch ${branch} no repositório ${context.repo.owner}/${context.repo.repo}:`);
+              
               if (pulls.length > 0) {
-                const prNumber = pulls[0].number;
-                core.setOutput('pr-number', prNumber);
-                core.info(`PR #${prNumber} criado com sucesso`);
+                console.log(`\nEncontrados ${pulls.length} PR(s) abertos:`);
+                pulls.forEach((pr, index) => {
+                  console.log(`${index + 1}. PR #${pr.number}: ${pr.title}`);
+                  console.log(`   URL: ${pr.html_url}`);
+                  console.log(`   Status: ${pr.state}`);
+                  console.log(`   Criado por: ${pr.user.login}`);
+                  console.log('---');
+                });
+                
+                // Usar o primeiro PR encontrado (deve ser o recém-criado)
+                const pr = pulls[0];
+                core.setOutput('pr-number', pr.number);
+                core.info(`PR #${pr.number} criado com sucesso`);
               } else {
+                console.log('Nenhum PR encontrado após criação.');
                 core.warning('PR não encontrado após criação');
               }
             } catch (error) {
+              console.error('Erro ao obter número do PR:', error.message);
+              if (error.status === 401) {
+                console.error('Erro de autenticação. Verifique se o token está configurado corretamente.');
+              } else if (error.status === 404) {
+                console.error('Repositório não encontrado. Verifique se o owner e repo estão corretos.');
+              } else if (error.status === 403) {
+                console.error('Acesso negado. Este repositório pode ser privado. Configure um token do GitHub.');
+              }
               core.error(`Erro ao obter número do PR: ${error.message}`);
             }
       
@@ -284,11 +364,19 @@ jobs:
               if (!prNumber || prNumber === '') {
                 core.warning('Número do PR não encontrado, tentando buscar pela API...');
                 
-                // Fallback: buscar o PR pela API
-                const { data: pulls } = await github.rest.pulls.list({
+                // Fallback: buscar o PR pela API usando Octokit
+                const { Octokit } = require('@octokit/rest');
+                const octokit = new Octokit({
+                  auth: process.env.GITHUB_TOKEN,
+                });
+                
+                const branch = context.ref.replace('refs/heads/', '');
+                console.log(`Buscando PR da branch: ${branch} via API...`);
+                
+                const { data: pulls } = await octokit.rest.pulls.list({
                   owner: context.repo.owner,
                   repo: context.repo.repo,
-                  head: `${context.repo.owner}:${context.ref.replace('refs/heads/', '')}`,
+                  head: `${context.repo.owner}:${branch}`,
                   state: 'open',
                 });
                 
@@ -297,6 +385,15 @@ jobs:
                   return;
                 }
                 
+                console.log(`\nEncontrados ${pulls.length} PR(s) abertos:`);
+                pulls.forEach((pr, index) => {
+                  console.log(`${index + 1}. PR #${pr.number}: ${pr.title}`);
+                  console.log(`   URL: ${pr.html_url}`);
+                  console.log(`   Status: ${pr.state}`);
+                  console.log(`   Criado por: ${pr.user.login}`);
+                  console.log('---');
+                });
+                
                 const pr = pulls[0];
                 core.info(`PR encontrado via API: #${pr.number}`);
                 
@@ -304,7 +401,7 @@ jobs:
                 await new Promise(resolve => setTimeout(resolve, 5000));
                 
                 // Buscar o PR atualizado
-                const { data: updatedPr } = await github.rest.pulls.get({
+                const { data: updatedPr } = await octokit.rest.pulls.get({
                   owner: context.repo.owner,
                   repo: context.repo.repo,
                   pull_number: pr.number,
@@ -317,8 +414,13 @@ jobs:
                 // Aguardar para o GitHub calcular o status de merge
                 await new Promise(resolve => setTimeout(resolve, 5000));
                 
-                // Buscar o PR
-                const { data: pr } = await github.rest.pulls.get({
+                // Buscar o PR usando Octokit
+                const { Octokit } = require('@octokit/rest');
+                const octokit = new Octokit({
+                  auth: process.env.GITHUB_TOKEN,
+                });
+                
+                const { data: pr } = await octokit.rest.pulls.get({
                   owner: context.repo.owner,
                   repo: context.repo.repo,
                   pull_number: parseInt(prNumber),
