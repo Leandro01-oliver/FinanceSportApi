@@ -71,6 +71,8 @@ jobs:
     runs-on: ubuntu-latest
     needs: sonar-analysis
     if: failure()  # Executa apenas se sonar-analysis falhar
+    env:
+      GITHUB_TOKEN: ${{ secrets.GH_PAT }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -124,6 +126,8 @@ jobs:
     runs-on: ubuntu-latest
     needs: sonar-analysis
     if: success() && github.ref != 'refs/heads/develop' && github.ref != 'refs/heads/master' && github.ref != 'refs/heads/homologacao'  # Só executa se sonar-analysis for bem-sucedido e não for uma branch protegida
+    env:
+      GITHUB_TOKEN: ${{ secrets.GH_PAT }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -166,6 +170,7 @@ jobs:
       
       - name: Criar Pull Request (se não existir)
         if: steps.check-pr.outputs.pr-exists == 'false'
+        id: create-pr
         uses: devops-infra/action-pull-request@v0.5.0
         with:
           github_token: ${{ secrets.GH_PAT }}
@@ -182,43 +187,46 @@ jobs:
             **Branch:** ${{ github.ref_name }}
             **Autor:** ${{ github.actor }}
             **Data:** ${{ github.event.head_commit.timestamp }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
       
-      - name: Merge PR automaticamente (se existir)
-        if: steps.check-pr.outputs.pr-exists == 'true'
+      - name: Obter número do PR criado
+        if: steps.check-pr.outputs.pr-exists == 'false'
+        id: get-pr-number
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GH_PAT }}
           script: |
             try {
-              const prNumber = ${{ steps.check-pr.outputs.pr-number }};
-              core.info(`Tentando fazer merge do PR #${prNumber}...`);
+              // Aguardar um pouco para o PR ser criado
+              await new Promise(resolve => setTimeout(resolve, 5000));
               
-              // Verificar se o PR pode ser mergeado
-              const { data: pr } = await github.rest.pulls.get({
+              const { data: pulls } = await github.rest.pulls.list({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
-                pull_number: prNumber,
+                head: `${context.repo.owner}:${context.ref.replace('refs/heads/', '')}`,
+                state: 'open',
               });
               
-              if (pr.mergeable === true) {
-                await github.rest.pulls.merge({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  pull_number: prNumber,
-                  merge_method: 'merge',
-                  commit_title: `Merge automático: ${context.ref.replace('refs/heads/', '')} → develop`,
-                  commit_message: `Merge automático após análise bem-sucedida no SonarCloud\n\n- Branch: ${context.ref.replace('refs/heads/', '')}\n- Autor: ${context.actor}\n- Análise: https://sonarcloud.io/project/overview?id=Leandro01-oliver_FinanceSportApi`
-                });
-                core.info(`PR #${prNumber} mergeado com sucesso!`);
-              } else if (pr.mergeable === false) {
-                core.warning(`PR #${prNumber} não pode ser mergeado (conflitos ou checks pendentes)`);
+              if (pulls.length > 0) {
+                const prNumber = pulls[0].number;
+                core.setOutput('pr-number', prNumber);
+                core.info(`PR #${prNumber} criado com sucesso`);
               } else {
-                core.warning(`Status de merge do PR #${prNumber} é desconhecido`);
+                core.warning('PR não encontrado após criação');
               }
             } catch (error) {
-              core.error(`Erro ao fazer merge do PR: ${error.message}`);
-              // Não falhar o workflow por erro de merge
+              core.error(`Erro ao obter número do PR: ${error.message}`);
             }
+      
+      - name: Output PR number for auto-merge
+        if: steps.check-pr.outputs.pr-exists == 'true' || steps.get-pr-number.outputs.pr-number
+        run: |
+          if [[ "${{ steps.check-pr.outputs.pr-exists }}" == "true" ]]; then
+            echo "pr-number=${{ steps.check-pr.outputs.pr-number }}" >> $GITHUB_OUTPUT
+          else
+            echo "pr-number=${{ steps.get-pr-number.outputs.pr-number }}" >> $GITHUB_OUTPUT
+          fi
       
       - name: Send success email
         uses: dawidd6/action-send-mail@v3
@@ -238,6 +246,151 @@ jobs:
             **Status:** ${{ steps.check-pr.outputs.pr-exists == 'true' && 'PR existente processado' || 'Novo PR criado' }}
             **Branch:** ${{ github.ref_name }}
             **Autor:** ${{ github.actor }}
+
+            Veja o relatório do SonarCloud para detalhes: https://sonarcloud.io/project/overview?id=Leandro01-oliver_FinanceSportApi
+
+            Atenciosamente,
+            CI/CD Pipeline
+
+  auto-merge:
+    name: Auto Merge PR to develop
+    runs-on: ubuntu-latest
+    needs: [sonar-analysis, open-pull-request]
+    if: success() && github.ref != 'refs/heads/develop' && github.ref != 'refs/heads/master' && github.ref != 'refs/heads/homologacao'
+    env:
+      GITHUB_TOKEN: ${{ secrets.GH_PAT }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Configure Git for PAT operations
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git remote set-url origin https://x-access-token:${{ secrets.GH_PAT }}@github.com/${{ github.repository }}.git
+      
+      - name: Fazer merge automático do PR
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GH_PAT }}
+          script: |
+            try {
+              // Obter o número do PR do job anterior
+              const prNumber = '${{ needs.open-pull-request.outputs.pr-number }}';
+              
+              if (!prNumber || prNumber === '') {
+                core.warning('Número do PR não encontrado, tentando buscar pela API...');
+                
+                // Fallback: buscar o PR pela API
+                const { data: pulls } = await github.rest.pulls.list({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  head: `${context.repo.owner}:${context.ref.replace('refs/heads/', '')}`,
+                  state: 'open',
+                });
+                
+                if (pulls.length === 0) {
+                  core.warning('Nenhum PR encontrado para merge automático');
+                  return;
+                }
+                
+                const pr = pulls[0];
+                core.info(`PR encontrado via API: #${pr.number}`);
+                
+                // Aguardar para o GitHub calcular o status de merge
+                await new Promise(resolve => setTimeout(resolve, 5000));
+                
+                // Buscar o PR atualizado
+                const { data: updatedPr } = await github.rest.pulls.get({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  pull_number: pr.number,
+                });
+                
+                await attemptMerge(updatedPr);
+              } else {
+                core.info(`Usando PR #${prNumber} para merge automático`);
+                
+                // Aguardar para o GitHub calcular o status de merge
+                await new Promise(resolve => setTimeout(resolve, 5000));
+                
+                // Buscar o PR
+                const { data: pr } = await github.rest.pulls.get({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  pull_number: parseInt(prNumber),
+                });
+                
+                await attemptMerge(pr);
+              }
+              
+              async function attemptMerge(pr) {
+                core.info(`Status do PR #${pr.number}: mergeable=${pr.mergeable}, state=${pr.state}, draft=${pr.draft}`);
+                
+                if (pr.mergeable === true && pr.state === 'open' && !pr.draft) {
+                  // Verificar se há checks pendentes
+                  const { data: checks } = await github.rest.checks.listForRef({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    ref: pr.head.sha,
+                  });
+                  
+                  const pendingChecks = checks.check_runs.filter(check => 
+                    check.status === 'in_progress' || check.status === 'queued'
+                  );
+                  
+                  if (pendingChecks.length > 0) {
+                    core.warning(`PR #${pr.number} tem checks pendentes: ${pendingChecks.map(c => c.name).join(', ')}`);
+                    return;
+                  }
+                  
+                  // Fazer o merge
+                  await github.rest.pulls.merge({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    pull_number: pr.number,
+                    merge_method: 'merge',
+                    commit_title: `Merge automático: ${context.ref.replace('refs/heads/', '')} → develop`,
+                    commit_message: `Merge automático após análise bem-sucedida no SonarCloud\n\n- Branch: ${context.ref.replace('refs/heads/', '')}\n- Autor: ${context.actor}\n- Análise: https://sonarcloud.io/project/overview?id=Leandro01-oliver_FinanceSportApi`
+                  });
+                  core.info(`PR #${pr.number} mergeado com sucesso!`);
+                } else if (pr.mergeable === false) {
+                  core.warning(`PR #${pr.number} não pode ser mergeado (conflitos ou checks pendentes)`);
+                } else if (pr.draft) {
+                  core.warning(`PR #${pr.number} é um draft e não pode ser mergeado automaticamente`);
+                } else if (pr.state !== 'open') {
+                  core.warning(`PR #${pr.number} não está aberto (state: ${pr.state})`);
+                } else {
+                  core.warning(`Status de merge do PR #${pr.number} é desconhecido (mergeable: ${pr.mergeable})`);
+                }
+              }
+            } catch (error) {
+              core.error(`Erro ao fazer merge do PR: ${error.message}`);
+              // Não falhar o workflow por erro de merge
+            }
+      
+      - name: Send merge success email
+        if: success()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: ${{ secrets.SMTP_HOST }}
+          server_port: ${{ secrets.SMTP_PORT }}
+          username: ${{ secrets.SMTP_USERNAME }}
+          password: ${{ secrets.SMTP_PASSWORD }}
+          subject: "Merge automático realizado para '${{ github.ref_name }}' → develop"
+          to: dev@email.com
+          from: "CI Bot <ci@email.com>"
+          body: |
+            Olá,
+
+            O merge automático para a branch '${{ github.ref_name }}' foi processado.
+
+            **Branch:** ${{ github.ref_name }}
+            **Autor:** ${{ github.actor }}
+            **Target:** develop
 
             Veja o relatório do SonarCloud para detalhes: https://sonarcloud.io/project/overview?id=Leandro01-oliver_FinanceSportApi
 
