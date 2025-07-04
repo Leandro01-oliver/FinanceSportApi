@@ -288,13 +288,28 @@ jobs:
             }
       
       - name: Output PR number for auto-merge
-        if: steps.check-pr.outputs.pr-exists == 'true' || steps.get-pr-number.outputs.pr-number
+        id: output-pr-number
+        if: always()
         run: |
           if [[ "${{ steps.check-pr.outputs.pr-exists }}" == "true" ]]; then
             echo "pr-number=${{ steps.check-pr.outputs.pr-number }}" >> $GITHUB_OUTPUT
-          else
+            echo "PR number from existing PR: ${{ steps.check-pr.outputs.pr-number }}"
+          elif [[ "${{ steps.get-pr-number.outputs.pr-number }}" != "" ]]; then
             echo "pr-number=${{ steps.get-pr-number.outputs.pr-number }}" >> $GITHUB_OUTPUT
+            echo "PR number from created PR: ${{ steps.get-pr-number.outputs.pr-number }}"
+          else
+            echo "No PR number found"
           fi
+      
+      - name: Debug - Verificar outputs
+        if: always()
+        run: |
+          echo "=== DEBUG OUTPUTS ==="
+          echo "check-pr.pr-exists: ${{ steps.check-pr.outputs.pr-exists }}"
+          echo "check-pr.pr-number: ${{ steps.check-pr.outputs.pr-number }}"
+          echo "get-pr-number.pr-number: ${{ steps.get-pr-number.outputs.pr-number }}"
+          echo "final pr-number: ${{ steps.output-pr-number.outputs.pr-number }}"
+          echo "====================="
       
       - name: Send success email
         uses: dawidd6/action-send-mail@v3
