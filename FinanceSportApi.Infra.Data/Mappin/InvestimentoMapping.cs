@@ -20,7 +20,7 @@ namespace FinanceSportApi.Infraestruture.Data.Mapping
                 UsuarioId = investimento.UsuarioId,
                 Usuario = new UsuarioVm
                 {
-                    Id = investimento.Usuario.Id,
+                    Id = Guid.Parse(investimento.Usuario.Id),
                     Nome = investimento.Usuario.Nome
                 }
             };

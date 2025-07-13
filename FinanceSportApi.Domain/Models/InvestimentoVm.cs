@@ -9,7 +9,7 @@ namespace FinanceSportApi.Domain.Models
         public int Quantidade { get; set; }
         public decimal PrecoUnitario { get; set; }
         public DateTime DataCompra { get; set; }
-        public Guid UsuarioId { get; set; }
+        public string UsuarioId { get; set; }
         public UsuarioVm Usuario { get; set; }
     }
 }

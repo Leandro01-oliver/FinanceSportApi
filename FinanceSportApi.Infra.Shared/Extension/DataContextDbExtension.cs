@@ -10,6 +10,7 @@ namespace FinanceSportApi.Infra.Shared.Extension
     {
         public static IServiceCollection AddDataContextDb(this IServiceCollection services, IConfiguration configuration, TipoDb  tipoDb)
         {
+            // Configurar DbContext primeiro
             if (tipoDb.Equals(TipoDb.SQL))
             {
                 var connectionString = configuration.GetConnectionString("SqlServer");
