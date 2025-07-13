@@ -11,7 +11,7 @@ namespace FinanceSportApi.Infraestruture.Data.Mapping
 
             return new UsuarioVm
             {
-                Id = usuario.Id,
+                Id = Guid.Parse(usuario.Id),
                 Nome = usuario.Nome,
                 Telefone = usuario.Telefone,
                 Email = usuario.Email,
@@ -28,7 +28,7 @@ namespace FinanceSportApi.Infraestruture.Data.Mapping
 
             return new Usuario
             {
-                Id = usuarioVm.Id,
+                Id = usuarioVm.Id.ToString(),
                 Nome = usuarioVm.Nome,
                 Telefone = usuarioVm.Telefone,
                 Email = usuarioVm.Email,
