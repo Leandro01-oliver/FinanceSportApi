@@ -17,7 +17,7 @@ namespace FinanceSportApi.Infraestruture.Data.Mapping
                 UsuarioId = orcamento.UsuarioId,
                 Usuario = new UsuarioVm
                 {
-                    Id = orcamento.Usuario.Id,
+                    Id = Guid.Parse(orcamento.Usuario.Id),
                     Nome = orcamento.Usuario.Nome
                 }
             };

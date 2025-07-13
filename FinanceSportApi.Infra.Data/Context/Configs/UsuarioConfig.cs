@@ -8,9 +8,8 @@ namespace FinanceSportApi.Infra.Data
     {
         public void Configure(EntityTypeBuilder<Usuario> builder)
         {
-            builder.HasKey(p => p.Id);
-
-            builder.Property(x => x.Id).HasColumnName("UsuarioId");
+            // O Identity já gerencia a chave primária (Id)
+            // Não precisamos configurar a chave novamente
 
             builder.Property(p => p.Nome)
                    .IsRequired()
@@ -20,24 +19,30 @@ namespace FinanceSportApi.Infra.Data
                    .IsRequired()
                    .HasMaxLength(16);
 
-            builder.Property(u => u.Senha)
-              .IsRequired()
-              .HasMaxLength(100);
+            // O Identity já gerencia Email, UserName, etc.
+            // Removemos a configuração de Senha pois o Identity usa PasswordHash
 
-            builder.Property(u => u.Telefone)
-                   .HasMaxLength(20);
+            builder.Property(u => u.TipoUsuario)
+                   .IsRequired()
+                   .HasConversion<string>();
+
+            builder.Property(u => u.UltimoLogin)
+                   .IsRequired();
 
             builder.HasMany(u => u.Investimentos)
                    .WithOne(i => i.Usuario)
-                   .HasForeignKey(i => i.UsuarioId);
+                   .HasForeignKey(i => i.UsuarioId)
+                   .OnDelete(DeleteBehavior.Cascade);
 
             builder.HasMany(u => u.Transacoes)
                    .WithOne(t => t.Usuario)
-                   .HasForeignKey(t => t.UsuarioId);
+                   .HasForeignKey(t => t.UsuarioId)
+                   .OnDelete(DeleteBehavior.Cascade);
 
             builder.HasOne(u => u.Orcamento)
                    .WithOne(o => o.Usuario)
-                   .HasForeignKey<Orcamento>(o => o.UsuarioId);
+                   .HasForeignKey<Orcamento>(o => o.UsuarioId)
+                   .OnDelete(DeleteBehavior.Cascade);
         }
     }
 }

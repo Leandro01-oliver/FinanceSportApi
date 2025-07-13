@@ -9,7 +9,7 @@ namespace FinanceSportApi.Domain.Models
         public TipoTransacao TipoTransacao { get; set; } 
         public string Descricao { get; set; }
 
-        public Guid UsuarioId { get; set; }
+        public string UsuarioId { get; set; }
         public UsuarioVm Usuario { get; set; }
     }
 }
